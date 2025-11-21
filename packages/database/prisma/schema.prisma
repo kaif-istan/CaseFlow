@@ -1,0 +1,113 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// =============================
+// Enums
+// =============================
+
+enum UserRole {
+  ADMIN
+  OPERATOR
+}
+
+enum CaseCategory {
+  TAX
+  LICENSE
+  PERMIT
+}
+
+enum CasePriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum ImportStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+// =============================
+// Main Models
+// =============================
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String // hashed with bcryptjs
+  name      String?
+  role      UserRole @default(OPERATOR)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  createdCases Case[]      @relation("CaseCreatedBy")
+  imports      ImportLog[]
+
+  @@map("users")
+}
+
+model Case {
+  id     String @id @default(cuid())
+  caseId String @unique // e.g., C-1001 (from CSV)
+
+  applicantName String
+  dob           DateTime
+  email         String?
+  phone         String?
+  category      CaseCategory
+  priority      CasePriority @default(LOW)
+
+  status String @default("OPEN") // OPEN, CLOSED, etc. (future-proof)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Audit
+  createdById String
+  createdBy   User       @relation("CaseCreatedBy", fields: [createdById], references: [id])
+  importLogId String?
+  importLog   ImportLog? @relation(fields: [importLogId], references: [id])
+
+  @@index([caseId])
+  @@index([createdAt])
+  @@index([category])
+  @@index([priority])
+  @@map("cases")
+}
+
+model ImportLog {
+  id String @id @default(cuid())
+
+  totalRows    Int
+  successCount Int          @default(0)
+  failedCount  Int          @default(0)
+  status       ImportStatus @default(PENDING)
+
+  errorReport Json? // optional: store failed rows as JSON
+  startedAt   DateTime  @default(now())
+  finishedAt  DateTime?
+
+  // Who performed the import
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id])
+
+  // Cases created in this import
+  cases Case[]
+
+  @@map("import_logs")
+}

@@ -1,0 +1,27 @@
+{
+  "name": "@caseflow/db",
+  "version": "0.0.0",
+  "description": "",
+  "scripts": {
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev --create-only",
+    "db:deploy": "prisma migrate deploy",
+    "db:studio": "prisma studio --schema=./prisma/schema.prisma"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/pg": "^8.15.6",
+    "prisma": "^7.0.0"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.0.0",
+    "@prisma/client": "^7.0.0",
+    "dotenv": "^17.2.3",
+    "pg": "^8.16.3"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}
