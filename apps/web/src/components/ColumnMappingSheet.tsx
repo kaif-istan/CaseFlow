@@ -26,10 +26,12 @@ import { X, GripVertical } from "lucide-react"
 import { useAppDispatch, useAppSelector } from "@/store/hooks"
 import { setColumnMapping } from "@/store/importSlice"
 
-// Explicitly define keys as string literals
+// -------------------------------------------------------------
+// REQUIRED FIELDS — MUST MATCH *CaseRow* keys exactly
+// -------------------------------------------------------------
 const requiredFields = [
-  { key: "case_id" as const, label: "Case ID" },
-  { key: "applicant_name" as const, label: "Applicant Name" },
+  { key: "caseId" as const, label: "Case ID" },
+  { key: "applicantName" as const, label: "Applicant Name" },
   { key: "dob" as const, label: "Date of Birth" },
   { key: "email" as const, label: "Email" },
   { key: "phone" as const, label: "Phone" },
@@ -39,6 +41,22 @@ const requiredFields = [
 
 type FieldKey = (typeof requiredFields)[number]["key"]
 
+// -------------------------------------------------------------
+// CSV ALIASES: auto-detect CSV headers → internal camelCase fields
+// -------------------------------------------------------------
+const CSV_ALIAS_MAP: Record<FieldKey, string[]> = {
+  caseId: ["caseid", "case_id", "case-id", "case id", "case"],
+  applicantName: ["applicantname", "applicant_name", "applicant-name", "applicant name", "name"],
+  dob: ["dob", "dateofbirth", "date_of_birth", "date-of-birth", "birthdate"],
+  email: ["email", "mail"],
+  phone: ["phone", "mobile", "contact"],
+  category: ["category", "type"],
+  priority: ["priority", "prio"],
+}
+
+// -------------------------------------------------------------
+// DRAGGABLE HEADER CHIP
+// -------------------------------------------------------------
 function DraggableHeader({ header }: { header: string }) {
   const {
     attributes,
@@ -70,6 +88,9 @@ function DraggableHeader({ header }: { header: string }) {
   )
 }
 
+// -------------------------------------------------------------
+// DROPPABLE FIELD BLOCK (left side)
+// -------------------------------------------------------------
 function DroppableField({
   field,
   mappedHeader,
@@ -80,17 +101,16 @@ function DroppableField({
   onClear: () => void
 }) {
   const { isOver, setNodeRef } = useSortable({
-    id: field.key,
+    id: field.key, // camelCase IDs
     data: { type: "field" },
   })
 
   return (
     <div
       ref={setNodeRef}
-      className={`flex items-center justify-between p-4 rounded-lg border-2 transition-all ${isOver
-          ? "border-primary bg-primary/10"
-          : "border-dashed border-muted-foreground/30"
-        }`}
+      className={`flex items-center justify-between p-4 rounded-lg border-2 transition-all ${
+        isOver ? "border-primary bg-primary/10" : "border-dashed border-muted-foreground/30"
+      }`}
     >
       <div>
         <p className="font-medium">{field.label}</p>
@@ -98,6 +118,7 @@ function DroppableField({
           <p className="text-sm text-muted-foreground mt-1">← {mappedHeader}</p>
         )}
       </div>
+
       {mappedHeader && (
         <Button size="icon" variant="ghost" onClick={onClear}>
           <X className="h-4 w-4" />
@@ -107,22 +128,23 @@ function DroppableField({
   )
 }
 
+// -------------------------------------------------------------
+// MAIN COMPONENT
+// -------------------------------------------------------------
 export function ColumnMappingSheet() {
   const dispatch = useAppDispatch()
   const { headers, parsedAt, columnMapping } = useAppSelector((s) => s.import.present)
 
   const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: { distance: 8 },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
 
   const isOpen = parsedAt && Object.keys(columnMapping).length === 0
 
-  // Auto-matching on first open
+  // -------------------------------------------------------------
+  // AUTO-MAP on first open
+  // -------------------------------------------------------------
   useEffect(() => {
     if (!isOpen || headers.length === 0) return
 
@@ -130,15 +152,10 @@ export function ColumnMappingSheet() {
 
     headers.forEach((header) => {
       const normalized = header.toLowerCase().replace(/[^a-z0-9]/g, "")
-      requiredFields.forEach((field) => {
-        const fieldKey = field.key.toLowerCase()
-        const fieldLabel = field.label.toLowerCase().replace(/[^a-z0-9]/g, "")
-        if (
-          normalized.includes(fieldKey) ||
-          normalized.includes(fieldLabel) ||
-          fieldKey.includes(normalized)
-        ) {
-          autoMap[field.key] = header
+
+      ;(Object.keys(CSV_ALIAS_MAP) as FieldKey[]).forEach((field) => {
+        if (CSV_ALIAS_MAP[field].includes(normalized)) {
+          autoMap[field] = header
         }
       })
     })
@@ -148,24 +165,32 @@ export function ColumnMappingSheet() {
     }
   }, [headers, isOpen, dispatch])
 
+  // -------------------------------------------------------------
+  // DRAG END — map CSV header → camelCase field
+  // -------------------------------------------------------------
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
     if (!over) return
 
     const headerId = active.id as string
-    const fieldId = over.id as FieldKey
+    const fieldId = over.id as FieldKey // camelCase
 
-    if (requiredFields.some(f => f.key === fieldId)) {
-      dispatch(setColumnMapping({
-        ...columnMapping,
-        [fieldId]: headerId,
-      }))
+    if (requiredFields.some((f) => f.key === fieldId)) {
+      dispatch(
+        setColumnMapping({
+          ...columnMapping,
+          [fieldId]: headerId, // camelCase key stored!
+        })
+      )
     }
   }
 
+  // -------------------------------------------------------------
+  // CLEAR MAPPING
+  // -------------------------------------------------------------
   const handleClear = (fieldKey: FieldKey) => {
     const newMapping = { ...columnMapping }
-    delete newMapping[fieldKey]
+    delete newMapping[fieldKey] // camelCase key
     dispatch(setColumnMapping(newMapping))
   }
 
@@ -177,22 +202,26 @@ export function ColumnMappingSheet() {
         <SheetHeader>
           <SheetTitle>Map CSV Columns</SheetTitle>
           <SheetDescription>
-            Drag your CSV headers onto the required fields. Auto-matched where possible.
+            Drag your CSV headers onto the required fields. Auto-mapped where possible.
           </SheetDescription>
         </SheetHeader>
 
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <div className="mt-8 space-y-8">
-            {/* Target Fields */}
+
+            {/* Required Fields */}
             <div>
               <h3 className="text-lg font-semibold mb-4">Required Fields</h3>
               <div className="space-y-3">
-                <SortableContext items={requiredFields.map(f => f.key)} strategy={verticalListSortingStrategy}>
+                <SortableContext
+                  items={requiredFields.map((f) => f.key)}
+                  strategy={verticalListSortingStrategy}
+                >
                   {requiredFields.map((field) => (
                     <DroppableField
                       key={field.key}
                       field={field}
-                      mappedHeader={columnMapping[field.key]}
+                      mappedHeader={columnMapping[field.key]} // camelCase OK
                       onClear={() => handleClear(field.key)}
                     />
                   ))}
@@ -200,32 +229,26 @@ export function ColumnMappingSheet() {
               </div>
             </div>
 
-            {/* Source Headers */}
+            {/* CSV Headers */}
             <div>
               <h3 className="text-lg font-semibold mb-4">Your CSV Headers</h3>
               <div className="flex flex-wrap gap-2">
                 <SortableContext items={headers} strategy={verticalListSortingStrategy}>
-                  {headers.map((header) => {
-                    const isUsed = Object.values(columnMapping).includes(header)
-                    return (
-                      <DraggableHeader key={header} header={header} />
-                    )
-                  })}
+                  {headers.map((header) => (
+                    <DraggableHeader key={header} header={header} />
+                  ))}
                 </SortableContext>
               </div>
             </div>
           </div>
         </DndContext>
 
+        {/* Footer */}
         <div className="mt-10 flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
             {mappedCount} of {requiredFields.length} fields mapped
           </p>
-          <Button
-            size="lg"
-            onClick={() => { }}
-            disabled={mappedCount < requiredFields.length}
-          >
+          <Button size="lg" disabled={mappedCount < requiredFields.length}>
             Continue to Review
           </Button>
         </div>

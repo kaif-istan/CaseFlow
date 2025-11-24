@@ -114,19 +114,50 @@ export function ImportGrid() {
         setMessage("Starting import...")
         setFailedRows([])
 
-        const payload = data.map((row: any) => {
-            const r = { ...row }
-            delete r.__rowIndex__
+        const payload = rawRows.map((rawRow, index) => {
+            const edited = editedRows[index] || {};
+            const mapped: any = {};
+
+            // Apply mapping UI
+            Object.entries(columnMapping).forEach(([targetField, sourceHeader]) => {
+                if (!sourceHeader) return;
+                const value =
+                    edited[targetField as keyof typeof edited] ??
+                    rawRow[sourceHeader] ??
+                    "";
+                mapped[targetField] = value;
+            });
+
+            // FALLBACKS FIX: If mapping UI fails, detect CSV headers automatically
             return {
-                caseId: r.caseId,
-                applicantName: r.applicantName,
-                dob: r.dob,
-                email: r.email || null,
-                phone: r.phone || null,
-                category: r.category,
-                priority: r.priority,
-            }
-        })
+                caseId:
+                    mapped.caseId?.trim() ||
+                    rawRow["case_id"]?.trim() ||
+                    rawRow["Case ID"]?.trim() ||
+                    rawRow["case id"]?.trim() ||
+                    null,
+
+                applicantName:
+                    mapped.applicantName?.trim() ||
+                    rawRow["applicant_name"]?.trim() ||
+                    rawRow["Applicant Name"]?.trim() ||
+                    rawRow["applicant name"]?.trim() ||
+                    null,
+
+                dob:
+                    mapped.dob ||
+                    rawRow["dob"] ||
+                    rawRow["DOB"] ||
+                    null,
+
+                email: (mapped.email || "").trim() || null,
+                phone: (mapped.phone || "").trim() || null,
+                category: mapped.category || "TAX",
+                priority: mapped.priority || "MEDIUM",
+            };
+        });
+
+        console.log("Final Payload:", payload)
 
         let uploaded = 0
         const failed: any[] = []
@@ -175,7 +206,7 @@ export function ImportGrid() {
             setMessage(`Success! Imported ${uploaded} cases`)
             setTimeout(() => {
                 window.location.href = "/import-history"
-            }, 2000)
+            }, 10000)
         } else {
             setStatus("error")
             setFailedRows(failed)

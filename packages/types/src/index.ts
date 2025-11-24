@@ -2,8 +2,8 @@
 import z from "zod"
 export type CaseRow = {
 
-  case_id: string;
-  applicant_name: string;
+  caseId: string;
+  applicantName: string;
   dob: string;
   email: string;
   phone: string;
@@ -12,11 +12,11 @@ export type CaseRow = {
 };
 
 export const CaseRowSchema = z.object({
-  case_id: z
+  caseId: z
     .string()
     .min(1, "Required")
     .regex(/^C-\d+$/, "Must be like C-1001"),
-  applicant_name: z.string().min(1, "Required"),
+  applicantName: z.string().min(1, "Required"),
   dob: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD"),
   email: z.email().or(z.literal("")),
   phone: z

@@ -103,7 +103,9 @@ const importSlice = createSlice({
       state.error = action.payload;
     },
 
-    // === Flow ===
+    // WARNING:
+    // columnMapping keys MUST match CaseRow fields (caseId, applicantName, ...)
+    // and values MUST be CSV headers (case_id, applicant_name, ...).
     setColumnMapping: (state, action: PayloadAction<ColumnMapping>) => {
       state.columnMapping = action.payload;
       state.validationErrors = validateAllRows(state);

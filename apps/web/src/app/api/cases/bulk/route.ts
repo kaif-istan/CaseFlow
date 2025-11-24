@@ -3,34 +3,17 @@ import { NextResponse } from "next/server";
 import { Prisma, prisma } from "@caseflow/db";
 import { auth } from "@/app/api/auth/[...nextauth]/route";
 
-interface ImportRow {
-  caseId: string;
-  applicantName: string;
-  dob: string;
-  email?: string;
-  phone?: string;
-  category: string;
-  priority: string;
-}
-
-interface FailedRow {
-  rowIndex: number;
-  data: ImportRow;
-  errors: string[];
-}
-
 export async function POST(request: Request) {
   const session = await auth();
-
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const userId = session.user.id;
-  const rows: ImportRow[] = await request.json();
+  const userId = session.user.id as string;
+  const rows: any[] = await request.json(); // ← Accept any shape
 
   if (!Array.isArray(rows) || rows.length === 0) {
-    return NextResponse.json({ error: "No data provided" }, { status: 400 });
+    return NextResponse.json({ error: "No data" }, { status: 400 });
   }
 
   const importLog = await prisma.importLog.create({
@@ -44,65 +27,62 @@ export async function POST(request: Request) {
     },
   });
 
-  const chunkSize = 50;
-  const failedRows: FailedRow[] = [];
+  const failedRows: any[] = [];
   let successCount = 0;
 
-  for (let i = 0; i < rows.length; i += chunkSize) {
-    const chunk = rows.slice(i, i + chunkSize);
-
-    const prismaData = chunk.map((row) => ({
-      caseId: row.caseId,
-      applicantName: row.applicantName,
-      dob: new Date(row.dob),
-      email: row.email || null,
-      phone: row.phone || null,
-      category: row.category as any,
-      priority: row.priority as any,
-      createdById: userId,
-    }));
-
+  for (const [index, row] of rows.entries()) {
     try {
-      const result = await prisma.case.createMany({
-        data: prismaData,
-        skipDuplicates: true,
-      });
+      const rawDob = row.dob || row.d_o_b || row.DateOfBirth;
 
-      successCount += result.count;
-
-      const createdCases = await prisma.case.findMany({
-        where: {
-          caseId: { in: chunk.map((r) => r.caseId) },
-          createdById: userId,
-        },
-        select: { id: true },
-        take: result.count,
-      });
-
-      if (createdCases.length > 0) {
-        await prisma.caseLog.createMany({
-          data: createdCases.map((c) => ({
-            caseId: c.id,
-            action: "CREATED",
-            actorId: userId,
-          })),
-          skipDuplicates: true,
-        });
+      const dob = new Date(rawDob);
+      if (isNaN(dob.getTime())) {
+        throw new Error(`Invalid DOB: "${rawDob}"`);
       }
+
+      const caseData = {
+        caseId: (row.caseId || row.case_id)?.trim(),
+        applicantName: (row.applicantName || row.applicant_name)?.trim(),
+        dob,
+        email: (row.email || "")?.trim() || null,
+        phone: (row.phone || "")?.trim() || null,
+        category: (row.category || "TAX") as any,
+        priority: (row.priority || "MEDIUM") as any,
+        createdById: userId,
+      };
+
+      // Optional: validate required fields
+      if (!caseData.caseId) {
+        throw new Error("Missing caseId");
+      }
+      if (!caseData.applicantName) {
+        throw new Error("Missing applicantName");
+      }
+      if (isNaN(caseData.dob.getTime())) {
+        throw new Error("Invalid dob format");
+      }
+
+      const createdCase = await prisma.case.create({ data: caseData });
+
+      await prisma.caseLog.create({
+        data: {
+          caseId: createdCase.id,
+          action: "CREATED",
+          actorId: userId,
+        },
+      });
+
+      successCount++;
     } catch (error: any) {
-      chunk.forEach((row, idx) => {
-        failedRows.push({
-          rowIndex: i + idx + 2,
-          data: row,
-          errors: [error.message || "Database error"],
-        });
+      failedRows.push({
+        rowIndex: index + 2,
+        data: row,
+        errors: [error.message || "Unknown error"],
       });
     }
   }
 
   const failedCount = rows.length - successCount;
 
-  
   await prisma.importLog.update({
     where: { id: importLog.id },
     data: {
@@ -116,10 +96,8 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     success: true,
-    importLogId: importLog.id,
     total: rows.length,
     imported: successCount,
     failed: failedCount,
-    hasErrors: failedCount > 0,
   });
 }

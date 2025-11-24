@@ -1,0 +1,5 @@
+case_id,applicant_name,dob,email,phone,category,priority
+C-1001,Asha Verma,2002-09-14,asha.verma@example.com,8507722360,TAX,HIGH
+C-1002,John Doe,2001-09-14,john.doe@hotmail.com,9876543210,LICENSE,MEDIUM
+C-1003,Li Wei,2000-09-14,li.wei@gmail.com,12025550123,PERMIT,LOW
+C-1004,Maria Santos,1999-09-14,maria@sample.org,5550198765,TAX,MEDIUM

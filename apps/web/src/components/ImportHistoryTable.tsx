@@ -16,7 +16,7 @@ type ImportLog = {
   status: "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED"
   startedAt: string
   finishedAt: string | null
-  errorReport: any | null
+  errorReport: any[] | null
   createdBy: {
     name: string | null
     email: string
@@ -38,32 +38,34 @@ export function ImportHistoryTable() {
     fetch("/api/import-logs")
       .then(r => r.json())
       .then(data => {
-        setImports(data.imports)
+        setImports(data.imports || [])
         setLoading(false)
       })
+      .catch(() => setLoading(false))
   }, [])
 
-  const downloadErrorReport = async (logId: string, errorReport: any) => {
-    if (!errorReport) return
+  const downloadErrorReport = (logId: string, errorReport: any[] | null) => {
+    if (!errorReport || errorReport.length === 0) return
 
-    const rows = JSON.parse(errorReport)
+    // NO JSON.parse() — it's already an object!
     const csv = [
-      ["Row", "caseId", "applicantName", "email", "Error"],
-      ...rows.map((r: any) => [
+      "Row,Case ID,Applicant Name,Email,Error",
+      ...errorReport.map(r => [
         r.rowIndex,
         r.data.caseId || "",
         r.data.applicantName || "",
         r.data.email || "",
-        r.errors.join(" | "),
-      ])
-    ].map(r => r.join(",")).join("\n")
+        `"${(r.errors || []).join(" | ").replace(/"/g, '""')}"`
+      ].join(","))
+    ].join("\n")
 
-    const blob = new Blob([csv], { type: "text/csv" })
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
     a.href = url
     a.download = `import-errors-${logId}.csv`
     a.click()
+    URL.revokeObjectURL(url)
   }
 
   if (loading) {
