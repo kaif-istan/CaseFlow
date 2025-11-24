@@ -28,7 +28,7 @@ const menuItems = [
   { title: "Dashboard", url: "/dashboard", icon: Home },
   { title: "Import Cases", url: "/import", icon: Upload },
   { title: "Cases", url: "/cases", icon: FileText },
-  { title: "Import History", url: "/imports", icon: History },
+  { title: "Import History", url: "/import-history", icon: History },
   { title: "Users", url: "/admin/users", icon: Users, roles: ["ADMIN"] },
   { title: "Settings", url: "/settings", icon: Settings, roles: ["ADMIN"] },
 ]

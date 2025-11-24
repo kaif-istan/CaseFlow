@@ -1,31 +1,39 @@
 // apps/web/src/components/ImportGrid.tsx
 "use client"
-import React from "react"
-import { useRef, useMemo } from "react"
+
+import React, { useRef, useMemo, useState } from "react"
 import {
     useReactTable,
     getCoreRowModel,
     flexRender,
     ColumnDef,
+    CellContext,
 } from "@tanstack/react-table"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Progress } from "@/components/ui/progress"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useAppDispatch, useAppSelector } from "@/store/hooks"
 import { updateCell, fixAll } from "@/store/importSlice"
 import type { CaseRow } from "@caseflow/types"
-import { Undo2, Redo2 } from "lucide-react"
-import { CellContext } from "@tanstack/react-table"
+import { Undo2, Redo2, CheckCircle2, AlertCircle, Download } from "lucide-react"
 
 type RowWithIndex = any & { __rowIndex__: number }
 
+const CHUNK_SIZE = 50
+const MAX_RETRIES = 3
+
 export function ImportGrid() {
     const dispatch = useAppDispatch()
-    const { rawRows, headers } = useAppSelector((s) => s.import.present)
-    const { columnMapping, editedRows, validationErrors } = useAppSelector((s) => s.import.present)
+    const { rawRows, editedRows, columnMapping, validationErrors } = useAppSelector(s => s.import.present)
 
-    // Combine raw + edited data
+    const [status, setStatus] = useState<"idle" | "uploading" | "success" | "error">("idle")
+    const [progress, setProgress] = useState(0)
+    const [message, setMessage] = useState("")
+    const [failedRows, setFailedRows] = useState<any[]>([])
+
     const data = useMemo(() => {
         return rawRows.map((row: any, index: number) => ({
             ...row,
@@ -34,68 +42,57 @@ export function ImportGrid() {
         }))
     }, [rawRows, editedRows])
 
-    // Build columns from mapping
     const columns = useMemo<ColumnDef<RowWithIndex>[]>(() => {
         if (Object.keys(columnMapping).length === 0) {
-            return [
-                {
-                    header: "No columns mapped yet",
-                    accessorFn: () => "Map columns in the next step →",
-                },
-            ]
+            return [{ header: "No columns mapped yet", accessorFn: () => "Map columns first →" }]
         }
 
-        return Object.entries(columnMapping).map(([targetField, csvHeader]) => {
-            if (!csvHeader) return null
-            const field = targetField as keyof CaseRow
+        return Object.entries(columnMapping)
+            .map(([targetField, csvHeader]) => {
+                if (!csvHeader) return null
+                const field = targetField as keyof CaseRow
 
-            return {
-                accessorKey: field,
-                header: () => (
-                    <div className="font-medium">
-                        ← {csvHeader}
-                        <span className="text-xs text-muted-foreground ml-2">← {csvHeader}</span>
-                    </div>
-                ),
-                cell: ({ row }: CellContext<RowWithIndex, unknown>) => {
-                    const value = row.getValue(csvHeader) as string
-                    const rowIndex = row.original.__rowIndex__
-                    const errors = validationErrors[rowIndex]?.[field]
-
-                    return (
-                        <div className="relative">
-                            <Input
-                                defaultValue={value}
-                                onBlur={(e) => {
-                                    const newValue = e.target.value
-                                    if (newValue !== value) {
-                                        dispatch(updateCell({ rowIndex, field, value: newValue }))
-                                    }
-                                }}
-                                className={`border-0 focus-visible:ring-1 h-9 ${errors ? "bg-red-50 focus-visible:ring-red-500" : ""
-                                    }`}
-                            />
-                            {errors && (
-                                <Badge variant="destructive" className="absolute -top-6 left-0 text-xs">
-                                    {errors[0]} {/* Show only first error */}
-                                </Badge>
-                            )}
+                return {
+                    accessorKey: field,
+                    header: () => (
+                        <div className="font-medium">
+                            {targetField}
+                            <span className="text-xs text-muted-foreground ml-2">← {csvHeader}</span>
                         </div>
-                    )
-                },
-            }
-        }).filter(Boolean) as ColumnDef<RowWithIndex>[]
+                    ),
+                    cell: ({ row }: CellContext<RowWithIndex, unknown>) => {
+                        const value = row.original[field] as string
+                        const rowIndex = row.original.__rowIndex__
+                        const errors = validationErrors[rowIndex]?.[field]
+
+                        return (
+                            <div className="relative">
+                                <Input
+                                    defaultValue={value || ""}
+                                    onBlur={(e) => {
+                                        const newValue = e.target.value.trim()
+                                        if (newValue !== value) {
+                                            dispatch(updateCell({ rowIndex, field, value: newValue }))
+                                        }
+                                    }}
+                                    className={`border-0 focus-visible:ring-1 h-9 ${errors ? "bg-red-50 focus-visible:ring-red-500" : ""}`}
+                                />
+                                {errors && (
+                                    <Badge variant="destructive" className="absolute -top-6 left-0 text-xs">
+                                        {errors[0]}
+                                    </Badge>
+                                )}
+                            </div>
+                        )
+                    },
+                }
+            })
+            .filter(Boolean) as ColumnDef<RowWithIndex>[]
     }, [columnMapping, validationErrors, dispatch])
 
-    const table = useReactTable({
-        data,
-        columns,
-        getCoreRowModel: getCoreRowModel(),
-    })
-
+    const table = useReactTable({ data, columns, getCoreRowModel: getCoreRowModel() })
     const { rows } = table.getRowModel()
     const parentRef = useRef<HTMLDivElement>(null)
-
     const virtualizer = useVirtualizer({
         count: rows.length,
         getScrollElement: () => parentRef.current,
@@ -103,14 +100,112 @@ export function ImportGrid() {
         overscan: 20,
     })
 
-    const virtualRows = virtualizer.getVirtualItems()
-    const totalSize = virtualizer.getTotalSize()
-
-    // Error summary
-    const totalErrors = Object.values(validationErrors).reduce((sum, errs) =>
-        sum + Object.values(errs).flat().length, 0
+    const totalErrors = Object.values(validationErrors).reduce(
+        (sum, errs) => sum + Object.values(errs).flat().length,
+        0
     )
-    const canSubmit = totalErrors === 0
+    const canSubmit = totalErrors === 0 && rawRows.length > 0
+
+    const handleSubmit = async () => {
+        if (!canSubmit || status === "uploading") return
+
+        setStatus("uploading")
+        setProgress(0)
+        setMessage("Starting import...")
+        setFailedRows([])
+
+        const payload = data.map((row: any) => {
+            const r = { ...row }
+            delete r.__rowIndex__
+            return {
+                caseId: r.caseId,
+                applicantName: r.applicantName,
+                dob: r.dob,
+                email: r.email || null,
+                phone: r.phone || null,
+                category: r.category,
+                priority: r.priority,
+            }
+        })
+
+        let uploaded = 0
+        const failed: any[] = []
+
+        for (let i = 0; i < payload.length; i += CHUNK_SIZE) {
+            const chunk = payload.slice(i, i + CHUNK_SIZE)
+            let attempts = 0
+
+            while (attempts < MAX_RETRIES) {
+                try {
+                    const res = await fetch("/api/cases/bulk", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(chunk),
+                    })
+
+                    const result = await res.json()
+
+                    if (result.success) {
+                        uploaded += result.imported || chunk.length
+                        break
+                    } else {
+                        throw new Error(result.error || "Import failed")
+                    }
+                } catch (err: any) {
+                    attempts++
+                    if (attempts >= MAX_RETRIES) {
+                        chunk.forEach((row, idx) => {
+                            failed.push({
+                                rowIndex: i + idx + 2,
+                                data: row,
+                                errors: [err.message],
+                            })
+                        })
+                    }
+                    await new Promise(r => setTimeout(r, 1000 * attempts))
+                }
+            }
+
+            setProgress(Math.round((i + CHUNK_SIZE) / payload.length * 100))
+            setMessage(`Uploaded ${uploaded} of ${payload.length} cases...`)
+        }
+
+        if (failed.length === 0) {
+            setStatus("success")
+            setMessage(`Success! Imported ${uploaded} cases`)
+            setTimeout(() => {
+                window.location.href = "/import-history"
+            }, 2000)
+        } else {
+            setStatus("error")
+            setFailedRows(failed)
+            setMessage(`Imported ${uploaded}, ${failed.length} failed`)
+        }
+    }
+
+    const downloadErrors = () => {
+        const csv = [
+            "Row,Case ID,Applicant,Email,Error",
+            ...failedRows.map(f => `${f.rowIndex},"${f.data.caseId}","${f.data.applicantName}",${f.data.email || ""},"${f.errors.join(" | ")}"`)
+        ].join("\n")
+
+        const blob = new Blob([csv], { type: "text/csv" })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement("a")
+        a.href = url
+        a.download = `import-errors-${new Date().toISOString().slice(0, 10)}.csv`
+        a.click()
+    }
+
+    if (status === "success") {
+        return (
+            <div className="text-center py-32">
+                <CheckCircle2 className="w-24 h-24 text-green-500 mx-auto mb-6" />
+                <h2 className="text-4xl font-bold">Import Complete!</h2>
+                <p className="text-xl text-muted-foreground mt-4">Redirecting to Import History...</p>
+            </div>
+        )
+    }
 
     return (
         <div className="space-y-6">
@@ -122,31 +217,39 @@ export function ImportGrid() {
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" size="icon">
-                        <Undo2 className="h-4 w-4" />
-                    </Button>
-                    <Button variant="outline" size="icon">
-                        <Redo2 className="h-4 w-4" />
-                    </Button>
+                    <Button variant="outline" size="icon"><Undo2 className="h-4 w-4" /></Button>
+                    <Button variant="outline" size="icon"><Redo2 className="h-4 w-4" /></Button>
                 </div>
             </div>
+
+            {status === "uploading" && (
+                <div className="space-y-3">
+                    <Progress value={progress} className="h-4" />
+                    <p className="text-sm text-muted-foreground text-center">{message}</p>
+                </div>
+            )}
+
+            {status === "error" && (
+                <Alert variant="destructive">
+                    <AlertCircle className="h-5 w-5" />
+                    <AlertDescription className="space-y-3">
+                        <p>{message}</p>
+                        <Button onClick={downloadErrors} size="sm">
+                            <Download className="w-4 h-4 mr-2" />
+                            Download Error Report (.csv)
+                        </Button>
+                    </AlertDescription>
+                </Alert>
+            )}
 
             {totalErrors > 0 && (
                 <div className="rounded-lg border border-orange-200 bg-orange-50 p-4">
                     <h3 className="font-medium text-orange-900">Fix common issues</h3>
                     <div className="mt-3 flex flex-wrap gap-2">
-                        <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => dispatch(fixAll({ field: "priority", value: "MEDIUM" }))}
-                        >
+                        <Button size="sm" variant="outline" onClick={() => dispatch(fixAll({ field: "priority", value: "MEDIUM" }))}>
                             Set all priority → MEDIUM
                         </Button>
-                        <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => dispatch(fixAll({ field: "category", value: "TAX" }))}
-                        >
+                        <Button size="sm" variant="outline" onClick={() => dispatch(fixAll({ field: "category", value: "TAX" }))}>
                             Set all category → TAX
                         </Button>
                     </div>
@@ -154,31 +257,26 @@ export function ImportGrid() {
             )}
 
             <div className="rounded-lg border bg-card">
-                <div
-                    ref={parentRef}
-                    className="h-96 w-full overflow-auto"
-                    style={{ contain: "strict" }}
-                >
+                <div ref={parentRef} className="h-96 w-full overflow-auto" style={{ contain: "strict" }}>
                     <table className="w-full">
                         <thead className="sticky top-0 bg-muted/50 z-10">
-                            {table.getHeaderGroups().map((headerGroup) => (
-                                <tr key={headerGroup.id}>
-                                    {headerGroup.headers.map((header) => (
-                                        <th key={header.id} className="px-4 py-3 text-left text-sm font-medium">
-                                            {flexRender(header.column.columnDef.header, header.getContext())}
+                            {table.getHeaderGroups().map(g => (
+                                <tr key={g.id}>
+                                    {g.headers.map(h => (
+                                        <th key={h.id} className="px-4 py-3 text-left text-sm font-medium">
+                                            {flexRender(h.column.columnDef.header, h.getContext())}
                                         </th>
                                     ))}
                                 </tr>
                             ))}
                         </thead>
                         <tbody>
-                            <tr style={{ height: virtualRows[0]?.start ?? 0 }} />
-                            {virtualRows.map((virtualRow) => {
-                                const row = rows[virtualRow.index]
+                            {virtualizer.getVirtualItems().map(vr => {
+                                const row = rows[vr.index]
                                 if (!row) return null
                                 return (
-                                    <tr key={row.id} data-index={virtualRow.index}>
-                                        {row.getVisibleCells().map((cell) => (
+                                    <tr key={row.id}>
+                                        {row.getVisibleCells().map(cell => (
                                             <td key={cell.id} className="px-4 py-2 border-t">
                                                 {flexRender(cell.column.columnDef.cell, cell.getContext())}
                                             </td>
@@ -186,15 +284,19 @@ export function ImportGrid() {
                                     </tr>
                                 )
                             })}
-                            <tr style={{ height: totalSize - (virtualRows[virtualRows.length - 1]?.end ?? 0) }} />
                         </tbody>
                     </table>
                 </div>
             </div>
 
             <div className="flex justify-end">
-                <Button size="lg" disabled={!canSubmit}>
-                    Submit {rawRows.length.toLocaleString()} Cases
+                <Button
+                    size="lg"
+                    disabled={!canSubmit || status === "uploading"}
+                    onClick={handleSubmit}
+                    className="min-w-80"
+                >
+                    {status === "uploading" ? "Importing..." : `Submit ${rawRows.length.toLocaleString()} Cases`}
                 </Button>
             </div>
         </div>

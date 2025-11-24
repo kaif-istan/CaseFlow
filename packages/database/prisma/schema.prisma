@@ -59,37 +59,11 @@ model User {
   createdCases Case[]      @relation("CaseCreatedBy")
   imports      ImportLog[]
 
+  caseLogs     CaseLog[]   // ← for actor in CaseLog
+
   @@map("users")
 }
 
-model Case {
-  id     String @id @default(cuid())
-  caseId String @unique // e.g., C-1001 (from CSV)
-
-  applicantName String
-  dob           DateTime
-  email         String?
-  phone         String?
-  category      CaseCategory
-  priority      CasePriority @default(LOW)
-
-  status String @default("OPEN") // OPEN, CLOSED, etc. (future-proof)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Audit
-  createdById String
-  createdBy   User       @relation("CaseCreatedBy", fields: [createdById], references: [id])
-  importLogId String?
-  importLog   ImportLog? @relation(fields: [importLogId], references: [id])
-
-  @@index([caseId])
-  @@index([createdAt])
-  @@index([category])
-  @@index([priority])
-  @@map("cases")
-}
 
 model ImportLog {
   id String @id @default(cuid())
@@ -111,4 +85,53 @@ model ImportLog {
   cases Case[]
 
   @@map("import_logs")
+}
+
+// packages/database/prisma/schema.prisma
+
+model Case {
+  id        String    @id @default(cuid())
+  caseId   String    @unique
+
+  applicantName String
+  dob           DateTime
+  email         String?
+  phone         String?
+  category      CaseCategory
+  priority      CasePriority @default(LOW)
+  status        String       @default("OPEN")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  createdById String
+  createdBy   User   @relation("CaseCreatedBy", fields: [createdById], references: [id])
+  importLogId String?
+  importLog   ImportLog? @relation(fields: [importLogId], references: [id])
+
+  // ADD THIS LINE — INVERSE RELATION FOR CaseLog
+  logs        CaseLog[]
+
+  @@index([caseId])
+  @@index([createdAt])
+  @@index([category])
+  @@index([priority])
+  @@map("cases")
+}
+
+model CaseLog {
+  id        String   @id @default(cuid())
+  caseId   String
+  case      Case     @relation(fields: [caseId], references: [id]) // references Case.id
+
+  action    String
+  field     String?
+  oldValue  String?
+  newValue  String?
+  actorId   String
+  actor     User     @relation(fields: [actorId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@index([caseId])
+  @@index([createdAt])
 }
