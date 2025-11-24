@@ -1,6 +1,6 @@
 // apps/web/src/components/ImportGrid.tsx
 "use client"
-
+import React from "react"
 import { useRef, useMemo } from "react"
 import {
     useReactTable,
@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useAppDispatch, useAppSelector } from "@/store/hooks"
-import { updateCell, fixAll } from "@/store/importFlowSlice"
+import { updateCell, fixAll } from "@/store/importSlice"
 import { CaseRow } from "@caseflow/db"
 import { Undo2, Redo2 } from "lucide-react"
 import { CellContext } from "@tanstack/react-table"
@@ -22,12 +22,12 @@ type RowWithIndex = any & { __rowIndex__: number }
 
 export function ImportGrid() {
     const dispatch = useAppDispatch()
-    const { rawRows, headers } = useAppSelector((s) => s.import)
-    const { columnMapping, editedRows, validationErrors } = useAppSelector((s) => s.importFlow.present)
+    const { rawRows, headers } = useAppSelector((s) => s.import.present)
+    const { columnMapping, editedRows, validationErrors } = useAppSelector((s) => s.import.present)
 
     // Combine raw + edited data
     const data = useMemo(() => {
-        return rawRows.map((row, index) => ({
+        return rawRows.map((row: any, index: number) => ({
             ...row,
             ...editedRows[index],
             __rowIndex__: index,
@@ -53,12 +53,12 @@ export function ImportGrid() {
                 accessorKey: field,
                 header: () => (
                     <div className="font-medium">
-                        {field}
+                        ← {csvHeader}
                         <span className="text-xs text-muted-foreground ml-2">← {csvHeader}</span>
                     </div>
                 ),
                 cell: ({ row }: CellContext<RowWithIndex, unknown>) => {
-                    const value = row.getValue(field) as string
+                    const value = row.getValue(csvHeader) as string
                     const rowIndex = row.original.__rowIndex__
                     const errors = validationErrors[rowIndex]?.[field]
 
@@ -77,7 +77,7 @@ export function ImportGrid() {
                             />
                             {errors && (
                                 <Badge variant="destructive" className="absolute -top-6 left-0 text-xs">
-                                    {errors}
+                                    {errors[0]} {/* Show only first error */}
                                 </Badge>
                             )}
                         </div>
@@ -107,7 +107,9 @@ export function ImportGrid() {
     const totalSize = virtualizer.getTotalSize()
 
     // Error summary
-    const totalErrors = Object.keys(validationErrors).length
+    const totalErrors = Object.values(validationErrors).reduce((sum, errs) =>
+        sum + Object.values(errs).flat().length, 0
+    )
     const canSubmit = totalErrors === 0
 
     return (

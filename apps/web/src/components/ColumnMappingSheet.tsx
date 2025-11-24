@@ -12,14 +12,11 @@ import {
   DragEndEvent,
 } from "@dnd-kit/core"
 import {
-  arrayMove,
   SortableContext,
-  sortableKeyboardCoordinates,
   verticalListSortingStrategy,
+  sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable"
-import {
-  useSortable,
-} from "@dnd-kit/sortable"
+import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 
 import { Button } from "@/components/ui/button"
@@ -27,18 +24,20 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 import { Badge } from "@/components/ui/badge"
 import { X, GripVertical } from "lucide-react"
 import { useAppDispatch, useAppSelector } from "@/store/hooks"
-import { setColumnMapping } from "@/store/importFlowSlice"
-import { CaseRow } from "@caseflow/db"
+import { setColumnMapping } from "@/store/importSlice"
 
-const requiredFields: { key: keyof CaseRow; label: string }[] = [
-  { key: "case_id", label: "Case ID" },
-  { key: "applicant_name", label: "Applicant Name" },
-  { key: "dob", label: "Date of Birth" },
-  { key: "email", label: "Email" },
-  { key: "phone", label: "Phone" },
-  { key: "category", label: "Category" },
-  { key: "priority", label: "Priority" },
-]
+// Explicitly define keys as string literals
+const requiredFields = [
+  { key: "case_id" as const, label: "Case ID" },
+  { key: "applicant_name" as const, label: "Applicant Name" },
+  { key: "dob" as const, label: "Date of Birth" },
+  { key: "email" as const, label: "Email" },
+  { key: "phone" as const, label: "Phone" },
+  { key: "category" as const, label: "Category" },
+  { key: "priority" as const, label: "Priority" },
+] as const
+
+type FieldKey = (typeof requiredFields)[number]["key"]
 
 function DraggableHeader({ header }: { header: string }) {
   const {
@@ -76,14 +75,11 @@ function DroppableField({
   mappedHeader,
   onClear,
 }: {
-  field: { key: keyof CaseRow; label: string }
+  field: { key: FieldKey; label: string }
   mappedHeader: string | undefined
   onClear: () => void
 }) {
-  const {
-    isOver,
-    setNodeRef,
-  } = useSortable({
+  const { isOver, setNodeRef } = useSortable({
     id: field.key,
     data: { type: "field" },
   })
@@ -91,11 +87,10 @@ function DroppableField({
   return (
     <div
       ref={setNodeRef}
-      className={`flex items-center justify-between p-4 rounded-lg border-2 transition-all ${
-        isOver
+      className={`flex items-center justify-between p-4 rounded-lg border-2 transition-all ${isOver
           ? "border-primary bg-primary/10"
           : "border-dashed border-muted-foreground/30"
-      }`}
+        }`}
     >
       <div>
         <p className="font-medium">{field.label}</p>
@@ -114,8 +109,7 @@ function DroppableField({
 
 export function ColumnMappingSheet() {
   const dispatch = useAppDispatch()
-  const { headers, parsedAt } = useAppSelector((s) => s.import)
-  const { columnMapping } = useAppSelector((s) => s.importFlow.present)
+  const { headers, parsedAt, columnMapping } = useAppSelector((s) => s.import.present)
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -132,7 +126,7 @@ export function ColumnMappingSheet() {
   useEffect(() => {
     if (!isOpen || headers.length === 0) return
 
-    const autoMap: Partial<Record<keyof CaseRow, string>> = {}
+    const autoMap: Partial<Record<FieldKey, string>> = {}
 
     headers.forEach((header) => {
       const normalized = header.toLowerCase().replace(/[^a-z0-9]/g, "")
@@ -156,13 +150,11 @@ export function ColumnMappingSheet() {
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
-
     if (!over) return
 
     const headerId = active.id as string
-    const fieldId = over.id as keyof CaseRow
+    const fieldId = over.id as FieldKey
 
-    // Only allow dropping headers onto fields
     if (requiredFields.some(f => f.key === fieldId)) {
       dispatch(setColumnMapping({
         ...columnMapping,
@@ -171,9 +163,9 @@ export function ColumnMappingSheet() {
     }
   }
 
-  const handleClear = (field: keyof CaseRow) => {
+  const handleClear = (fieldKey: FieldKey) => {
     const newMapping = { ...columnMapping }
-    delete newMapping[field]
+    delete newMapping[fieldKey]
     dispatch(setColumnMapping(newMapping))
   }
 
@@ -189,20 +181,13 @@ export function ColumnMappingSheet() {
           </SheetDescription>
         </SheetHeader>
 
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <div className="mt-8 space-y-8">
             {/* Target Fields */}
             <div>
               <h3 className="text-lg font-semibold mb-4">Required Fields</h3>
               <div className="space-y-3">
-                <SortableContext
-                  items={requiredFields.map(f => f.key)}
-                  strategy={verticalListSortingStrategy}
-                >
+                <SortableContext items={requiredFields.map(f => f.key)} strategy={verticalListSortingStrategy}>
                   {requiredFields.map((field) => (
                     <DroppableField
                       key={field.key}
@@ -219,19 +204,11 @@ export function ColumnMappingSheet() {
             <div>
               <h3 className="text-lg font-semibold mb-4">Your CSV Headers</h3>
               <div className="flex flex-wrap gap-2">
-                <SortableContext
-                  items={headers}
-                  strategy={verticalListSortingStrategy}
-                >
+                <SortableContext items={headers} strategy={verticalListSortingStrategy}>
                   {headers.map((header) => {
                     const isUsed = Object.values(columnMapping).includes(header)
                     return (
-                      <DraggableHeader
-                        key={header}
-                        header={header}
-                        // Optional: disable if already used
-                        // disabled={isUsed}
-                      />
+                      <DraggableHeader key={header} header={header} />
                     )
                   })}
                 </SortableContext>
@@ -246,7 +223,7 @@ export function ColumnMappingSheet() {
           </p>
           <Button
             size="lg"
-            onClick={() => {}}
+            onClick={() => { }}
             disabled={mappedCount < requiredFields.length}
           >
             Continue to Review

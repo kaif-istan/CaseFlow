@@ -1,12 +1,10 @@
 // apps/web/src/store/store.ts
 import { configureStore } from "@reduxjs/toolkit";
-import importReducer from "./importSlice"; // ← your original (untouched)
-import importFlowReducer from "./importFlowSlice"; // ← new Phase 4+
+import { undoableImport } from "./importSlice";
 
 export const store = configureStore({
   reducer: {
-    import: importReducer, // Phase 3: CSV upload + preview
-    importFlow: importFlowReducer, // Phase 4+: mapping + edits + undo
+    import: undoableImport,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

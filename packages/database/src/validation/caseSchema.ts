@@ -11,4 +11,4 @@ export const CaseRowSchema = z.object({
   priority: z.enum(["LOW", "MEDIUM", "HIGH"]),
 })
 
-export type CaseRow = z.infer<typeof CaseRowSchema>
+export type CaseRow = z.infer<typeof CaseRowSchema> | Partial<typeof CaseRowSchema>
