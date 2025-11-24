@@ -1,0 +1,150 @@
+CaseFlow
+├── apps
+│   ├── api
+│   │   ├── src
+│   │   │   └── index.ts
+│   │   ├── .env
+│   │   ├── .gitignore
+│   │   ├── package.json
+│   │   ├── tsconfig.json
+│   │   └── tsconfig.tsbuildinfo
+│   └── web
+│       ├── public
+│       │   ├── file.svg
+│       │   ├── globe.svg
+│       │   ├── next.svg
+│       │   ├── vercel.svg
+│       │   └── window.svg
+│       ├── src
+│       │   ├── app
+│       │   │   ├── _providers
+│       │   │   │   ├── ReduxProvider.tsx
+│       │   │   │   └── SessionProvider.tsx
+│       │   │   ├── (dashboard)
+│       │   │   │   ├── dashboard
+│       │   │   │   │   └── page.tsx
+│       │   │   │   ├── import
+│       │   │   │   │   ├── ImportPageClient.tsx
+│       │   │   │   │   ├── page.tsx
+│       │   │   │   │   └── TanStackImportPage.tsx
+│       │   │   │   └── layout.tsx
+│       │   │   ├── api
+│       │   │   │   └── auth
+│       │   │   │       └── [...nextauth]
+│       │   │   │           └── route.ts
+│       │   │   ├── login
+│       │   │   │   └── page.tsx
+│       │   │   ├── favicon.ico
+│       │   │   ├── globals.css
+│       │   │   ├── layout.tsx
+│       │   │   └── page.tsx
+│       │   ├── components
+│       │   │   ├── ui
+│       │   │   │   ├── alert.tsx
+│       │   │   │   ├── avatar.tsx
+│       │   │   │   ├── badge.tsx
+│       │   │   │   ├── button.tsx
+│       │   │   │   ├── card.tsx
+│       │   │   │   ├── dropdown-menu.tsx
+│       │   │   │   ├── input.tsx
+│       │   │   │   ├── label.tsx
+│       │   │   │   ├── progress.tsx
+│       │   │   │   ├── separator.tsx
+│       │   │   │   ├── sheet.tsx
+│       │   │   │   ├── sidebar.tsx
+│       │   │   │   ├── skeleton.tsx
+│       │   │   │   └── tooltip.tsx
+│       │   │   ├── app-sidebar.tsx
+│       │   │   ├── ColumnMappingSheet.tsx
+│       │   │   ├── import-upload.tsx
+│       │   │   ├── ImportGrid.tsx
+│       │   │   └── user-nav.tsx
+│       │   ├── hooks
+│       │   │   └── use-mobile.ts
+│       │   ├── lib
+│       │   │   ├── workers
+│       │   │   │   └── csvWorker.ts
+│       │   │   ├── auth.ts
+│       │   │   └── utils.ts
+│       │   ├── store
+│       │   │   ├── hooks.ts
+│       │   │   ├── importSlice.ts
+│       │   │   └── store.ts
+│       │   └── types
+│       │       └── next-auth.d.ts
+│       ├── types
+│       │   └── prisma-nextjs-monorepo-workaround-plugin.d.ts
+│       ├── .env
+│       ├── .gitignore
+│       ├── components.json
+│       ├── eslint.config.mjs
+│       ├── next-env.d.ts
+│       ├── next.config.ts
+│       ├── package.json
+│       ├── postcss.config.mjs
+│       ├── README.md
+│       ├── tsconfig.json
+│       └── tsconfig.tsbuildinfo
+├── packages
+│   ├── database
+│   │   ├── generated
+│   │   │   └── prisma
+│   │   │       ├── internal
+│   │   │       │   ├── class.ts
+│   │   │       │   ├── prismaNamespace.ts
+│   │   │       │   └── prismaNamespaceBrowser.ts
+│   │   │       ├── models
+│   │   │       │   ├── Case.ts
+│   │   │       │   ├── ImportLog.ts
+│   │   │       │   └── User.ts
+│   │   │       ├── browser.ts
+│   │   │       ├── client.ts
+│   │   │       ├── commonInputTypes.ts
+│   │   │       ├── enums.ts
+│   │   │       └── models.ts
+│   │   ├── prisma
+│   │   │   ├── migrations
+│   │   │   │   ├── 20251121182826_init
+│   │   │   │   │   └── migration.sql
+│   │   │   │   └── migration_lock.toml
+│   │   │   └── schema.prisma
+│   │   ├── src
+│   │   │   ├── validation
+│   │   │   │   └── caseSchema.ts
+│   │   │   ├── client.ts
+│   │   │   └── index.ts
+│   │   ├── .env
+│   │   ├── .gitignore
+│   │   ├── package.json
+│   │   ├── prisma.config.ts
+│   │   └── tsconfig.json
+│   ├── eslint-config
+│   │   ├── base.js
+│   │   ├── next.js
+│   │   ├── package.json
+│   │   ├── react-internal.js
+│   │   └── README.md
+│   ├── types
+│   │   ├── src
+│   │   │   └── index.ts
+│   │   ├── package.json
+│   │   └── tsconfig.json
+│   └── typescript-config
+│       ├── base.json
+│       ├── nextjs.json
+│       ├── package.json
+│       └── react-library.json
+├── scripts
+│   └── create-admin.ts
+├── .env
+├── .env.example
+├── .gitignore
+├── .npmrc
+├── docs.md
+├── Error.md
+├── package.json
+├── pnpm-lock.yaml
+├── pnpm-workspace.yaml
+├── README.md
+├── sample.csv
+└── turbo.json
