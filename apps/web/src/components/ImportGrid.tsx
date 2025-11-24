@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useAppDispatch, useAppSelector } from "@/store/hooks"
 import { updateCell, fixAll } from "@/store/importSlice"
-import { CaseRow } from "@caseflow/db"
+import type { CaseRow } from "@caseflow/types"
 import { Undo2, Redo2 } from "lucide-react"
 import { CellContext } from "@tanstack/react-table"
 
@@ -175,6 +175,7 @@ export function ImportGrid() {
                             <tr style={{ height: virtualRows[0]?.start ?? 0 }} />
                             {virtualRows.map((virtualRow) => {
                                 const row = rows[virtualRow.index]
+                                if (!row) return null
                                 return (
                                     <tr key={row.id} data-index={virtualRow.index}>
                                         {row.getVisibleCells().map((cell) => (

@@ -4,7 +4,7 @@ import { ImportGrid } from "@/components/ImportGrid"
 import { useAppSelector } from "@/store/hooks"
 
 export default function TanStackImportPage() {
-    const { parsedAt } = useAppSelector((s) => s.import)
+    const { parsedAt } = useAppSelector((s) => s.import.present)
 
     return (
         <div className="space-y-8">

@@ -1,0 +1,1 @@
+Prisma 7.0.0’s generated TypeScript client doesn’t type-check correctly in this setup, so tsc --noEmit blows up during your check-types step.

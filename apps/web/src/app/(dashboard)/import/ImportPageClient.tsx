@@ -7,22 +7,22 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
 
 export default function ImportPageClient() {
-    return (
-        <div className="space-y-8">
-            <div>
-                <h1 className="text-3xl font-bold">Import Cases</h1>
-                <p className="text-muted-foreground">Upload a CSV file to create new cases</p>
-            </div>
+  return (
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-3xl font-bold">Import Cases</h1>
+        <p className="text-muted-foreground">Upload a CSV file to create new cases</p>
+      </div>
 
-            <ImportUpload />
-            <PreviewTable />
-        </div>
-    )
+      <ImportUpload />
+      <PreviewTable />
+    </div>
+  )
 }
 
 // In import/page.tsx → PreviewTable component
 function PreviewTable() {
-  const { headers, rawRows, totalRows, parsedAt, parsing, error } = useAppSelector((s) => s.import)
+  const { headers, rawRows, totalRows, parsedAt, parsing, error } = useAppSelector((s) => s.import.present)
 
   if (parsing) {
     return (

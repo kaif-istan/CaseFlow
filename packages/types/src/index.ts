@@ -1,5 +1,15 @@
-// packages/database/src/validation/caseSchema.ts
-import { z } from "zod";
+
+import z from "zod"
+export type CaseRow = {
+
+  case_id: string;
+  applicant_name: string;
+  dob: string;
+  email: string;
+  phone: string;
+  category: "TAX" | "LICENSE" | "PERMIT" | "OTHER";
+  priority: "HIGH" | "MEDIUM" | "LOW";
+};
 
 export const CaseRowSchema = z.object({
   case_id: z
@@ -16,7 +26,3 @@ export const CaseRowSchema = z.object({
   category: z.enum(["TAX", "LICENSE", "PERMIT"]),
   priority: z.enum(["LOW", "MEDIUM", "HIGH"]),
 });
-
-export type CaseRow =
-  | z.infer<typeof CaseRowSchema>
-  | Partial<typeof CaseRowSchema>;

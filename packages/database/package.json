@@ -13,6 +13,8 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@caseflow/typescript-config": "workspace:*",
+    "@types/node": "^24.7.2",
     "@types/pg": "^8.15.6",
     "prisma": "^7.0.0"
   },

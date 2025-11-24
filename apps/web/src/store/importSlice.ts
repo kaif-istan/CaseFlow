@@ -1,11 +1,12 @@
 // apps/web/src/store/importSlice.ts
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import undoable from "redux-undo";
-import { CaseRowSchema, CaseRow } from "@caseflow/db";
+import { CaseRowSchema } from "@caseflow/types";
+import type { CaseRow } from "@caseflow/types";
 
 export type ColumnMapping = Partial<Record<keyof CaseRow, string>>;
 
-interface ImportState {
+export interface ImportState {
   // Parsing
   rawRows: any[];
   headers: string[];
@@ -55,9 +56,9 @@ const validateRow = (
   mapped: Partial<CaseRow>
 ): Record<keyof CaseRow, string[]> => {
   const result = CaseRowSchema.safeParse(mapped);
-  if (result.success) return {};
+  if (result.success) return {} as any;
 
-  const errors: Record<keyof CaseRow, string[]> = {};
+  const errors: Record<keyof CaseRow, string[]> = {} as any;
   result.error.issues.forEach((issue) => {
     const field = issue.path[0] as keyof CaseRow;
     if (!errors[field]) errors[field] = [];

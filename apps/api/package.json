@@ -5,12 +5,15 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "check-types": "tsc --noEmit"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@caseflow/eslint-config": "workspace:*",
+    "@caseflow/typescript-config": "workspace:*",
     "@caseflow/db": "workspace:*",
     "cors": "^2.8.5",
     "express": "^5.1.0",

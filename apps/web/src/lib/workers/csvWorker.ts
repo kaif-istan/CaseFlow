@@ -19,7 +19,7 @@ self.onmessage = (e: MessageEvent<string>) => {
           data: [],
           headers: [],
           totalRows: 0,
-          error: result.errors[0].message,
+          error: result?.errors?.[0]?.message ?? "Parse error",
         })
         return
       }
