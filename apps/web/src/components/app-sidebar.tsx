@@ -30,7 +30,7 @@ const menuItems = [
   { title: "Cases", url: "/cases", icon: FileText },
   { title: "Import History", url: "/import-history", icon: History },
   { title: "Users", url: "/admin/users", icon: Users, roles: ["ADMIN"] },
-  { title: "Settings", url: "/settings", icon: Settings, roles: ["ADMIN"] },
+  { title: "Settings", url: "/admin/settings", icon: Settings, roles: ["ADMIN"] },
 ]
 
 export function AppSidebar() {

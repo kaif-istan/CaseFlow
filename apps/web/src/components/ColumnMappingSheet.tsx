@@ -133,7 +133,7 @@ function DroppableField({
 // -------------------------------------------------------------
 export function ColumnMappingSheet() {
   const dispatch = useAppDispatch()
-  const { headers, parsedAt, columnMapping } = useAppSelector((s) => s.import.present)
+  const { headers, parsedAt, columnMapping } = useAppSelector((s) => s.import)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),

@@ -22,7 +22,7 @@ export default function ImportPageClient() {
 
 // In import/page.tsx → PreviewTable component
 function PreviewTable() {
-  const { headers, rawRows, totalRows, parsedAt, parsing, error } = useAppSelector((s) => s.import.present)
+  const { headers, rawRows, totalRows, parsedAt, parsing, error } = useAppSelector((s) => s.import)
 
   if (parsing) {
     return (

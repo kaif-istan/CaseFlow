@@ -1,7 +1,5 @@
-
-import z from "zod"
+import z from "zod";
 export type CaseRow = {
-
   caseId: string;
   applicantName: string;
   dob: string;
@@ -21,7 +19,9 @@ export const CaseRowSchema = z.object({
   email: z.email().or(z.literal("")),
   phone: z
     .string()
-    .regex(/^[\d\s+\-\(\)]*$/, "Invalid phone")
+    .trim()
+    .max(10, "Phone must be at most 10 digits")
+    .regex(/^[0-9+\-\s()]+$/, "Invalid phone number")
     .or(z.literal("")),
   category: z.enum(["TAX", "LICENSE", "PERMIT"]),
   priority: z.enum(["LOW", "MEDIUM", "HIGH"]),
