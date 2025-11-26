@@ -320,7 +320,7 @@ export function ImportGrid() {
 
       {totalErrors > 0 && (
         <div className="rounded-lg border border-orange-200 bg-orange-50 p-4">
-          <h3 className="font-medium text-orange-900">Fix common issues</h3>
+          <h3 className="font-medium text-orange-900 ">Fix common issues</h3>
           <div className="mt-3 flex flex-wrap gap-2">
             <Button
               size="sm"
@@ -334,6 +334,7 @@ export function ImportGrid() {
                   })
                 )
               }
+              className="dark:text-white dark:bg-black"
             >
               Set all priority → MEDIUM
             </Button>
