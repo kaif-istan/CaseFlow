@@ -24,7 +24,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 import { Badge } from "@/components/ui/badge"
 import { X, GripVertical } from "lucide-react"
 import { useAppDispatch, useAppSelector } from "@/store/hooks"
-import { setColumnMapping } from "@/store/importSlice"
+import { setColumnMapping, setMappingCompleted, applyMapping } from "@/store/importSlice"
+import { revalidateAll } from "@/store/importEditSlice"
 
 // -------------------------------------------------------------
 // REQUIRED FIELDS — MUST MATCH *CaseRow* keys exactly
@@ -108,9 +109,8 @@ function DroppableField({
   return (
     <div
       ref={setNodeRef}
-      className={`flex items-center justify-between p-4 rounded-lg border-2 transition-all ${
-        isOver ? "border-primary bg-primary/10" : "border-dashed border-muted-foreground/30"
-      }`}
+      className={`flex items-center justify-between p-4 rounded-lg border-2 transition-all ${isOver ? "border-primary bg-primary/10" : "border-dashed border-muted-foreground/30"
+        }`}
     >
       <div>
         <p className="font-medium">{field.label}</p>
@@ -133,14 +133,15 @@ function DroppableField({
 // -------------------------------------------------------------
 export function ColumnMappingSheet() {
   const dispatch = useAppDispatch()
-  const { headers, parsedAt, columnMapping } = useAppSelector((s) => s.import)
+  const { headers, parsedAt, columnMapping, mappingCompleted, rawRows } = useAppSelector((s) => s.import)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
 
-  const isOpen = parsedAt && Object.keys(columnMapping).length === 0
+  // OPEN LOGIC: Open if parsed AND not yet mapped
+  const isOpen = Boolean(parsedAt) && !mappingCompleted
 
   // -------------------------------------------------------------
   // AUTO-MAP on first open
@@ -148,22 +149,25 @@ export function ColumnMappingSheet() {
   useEffect(() => {
     if (!isOpen || headers.length === 0) return
 
+    // Only auto-map if mapping is empty (first open)
+    if (Object.keys(columnMapping).length > 0) return
+
     const autoMap: Partial<Record<FieldKey, string>> = {}
 
     headers.forEach((header) => {
       const normalized = header.toLowerCase().replace(/[^a-z0-9]/g, "")
 
-      ;(Object.keys(CSV_ALIAS_MAP) as FieldKey[]).forEach((field) => {
-        if (CSV_ALIAS_MAP[field].includes(normalized)) {
-          autoMap[field] = header
-        }
-      })
+        ; (Object.keys(CSV_ALIAS_MAP) as FieldKey[]).forEach((field) => {
+          if (CSV_ALIAS_MAP[field].includes(normalized)) {
+            autoMap[field] = header
+          }
+        })
     })
 
     if (Object.keys(autoMap).length > 0) {
       dispatch(setColumnMapping(autoMap))
     }
-  }, [headers, isOpen, dispatch])
+  }, [headers, isOpen, dispatch, columnMapping])
 
   // -------------------------------------------------------------
   // DRAG END — map CSV header → camelCase field
@@ -194,11 +198,40 @@ export function ColumnMappingSheet() {
     dispatch(setColumnMapping(newMapping))
   }
 
+  // -------------------------------------------------------------
+  // CONTINUE HANDLER
+  // -------------------------------------------------------------
+  const handleContinue = () => {
+    // 1. Transform rawRows to have canonical keys
+    dispatch(applyMapping())
+
+    // 2. Run validation on the now-mapped rows
+    // Note: We need to pass the *transformed* rows if we want to validate immediately,
+    // but applyMapping updates the store. We can rely on the store update or pass a computed version.
+    // Since Redux updates are synchronous, reading state immediately after might be tricky in some setups,
+    // but here we can compute the transformed rows locally for validation to be safe.
+
+    const transformedRows = rawRows.map(row => {
+      const newRow: any = { ...row };
+      Object.entries(columnMapping).forEach(([field, header]) => {
+        if (header && row[header] !== undefined) {
+          newRow[field] = row[header];
+        }
+      });
+      return newRow;
+    });
+
+    dispatch(revalidateAll(transformedRows))
+
+    // 3. Mark flow as complete (closes sheet, shows grid)
+    dispatch(setMappingCompleted(true))
+  }
+
   const mappedCount = Object.keys(columnMapping).length
 
   return (
-    <Sheet open={Boolean(isOpen)}>
-      <SheetContent side="right" className="w-[600px] sm:max-w-none overflow-y-auto">
+    <Sheet open={isOpen}>
+      <SheetContent side="right" className="w-[600px] sm:max-w-none overflow-y-auto" onInteractOutside={(e) => e.preventDefault()}>
         <SheetHeader>
           <SheetTitle>Map CSV Columns</SheetTitle>
           <SheetDescription>
@@ -248,7 +281,7 @@ export function ColumnMappingSheet() {
           <p className="text-sm text-muted-foreground">
             {mappedCount} of {requiredFields.length} fields mapped
           </p>
-          <Button size="lg" disabled={mappedCount < requiredFields.length}>
+          <Button size="lg" disabled={mappedCount < requiredFields.length} onClick={handleContinue}>
             Continue to Review
           </Button>
         </div>

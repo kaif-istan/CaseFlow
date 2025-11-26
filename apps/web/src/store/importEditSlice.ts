@@ -103,24 +103,26 @@ const importEditSlice = createSlice({
       state.validationErrors = validateAllRows(rawRows, state.editedRows);
     },
 
+    revalidateAll: (state, action: PayloadAction<any[]>) => {
+      const rawRows = action.payload;
+      state.validationErrors = validateAllRows(rawRows, state.editedRows);
+    },
+
     resetEdits: () => initialEditState,
   },
   extraReducers: (builder) => {
     builder
       .addCase(setParsedData, (state, action) => {
-        const rawRows = action.payload.data;
-
-        // Reset edits
+        // Reset edits on new file
         state.editedRows = {};
-
-        // 🔥 Compute validation errors immediately
-        state.validationErrors = validateAllRows(rawRows, {});
-
+        // Do NOT validate yet. Wait for mapping.
+        state.validationErrors = {};
         return state;
       })
       .addCase(resetImport, () => initialEditState);
   },
 });
 
-export const { updateCell, fixAll, resetEdits } = importEditSlice.actions;
+export const { updateCell, fixAll, revalidateAll, resetEdits } =
+  importEditSlice.actions;
 export default importEditSlice.reducer;

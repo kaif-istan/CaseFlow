@@ -30,7 +30,7 @@ export function ImportGrid() {
   const dispatch = useAppDispatch();
 
   // Core import state (non-undoable)
-  const { rawRows, columnMapping } = useAppSelector((s) => s.import);
+  const { rawRows, columnMapping, mappingCompleted } = useAppSelector((s) => s.import);
 
   // Editable state (undoable)
   const { editedRows, validationErrors } = useAppSelector(
@@ -59,13 +59,10 @@ export function ImportGrid() {
   }, [rawRows, editedRows]);
 
   const columns = useMemo<ColumnDef<RowWithIndex>[]>(() => {
-    if (Object.keys(columnMapping).length === 0) {
-      return [
-        {
-          header: "No columns mapped yet",
-          accessorFn: () => "Map columns first →",
-        },
-      ];
+    // If not mapped yet, we shouldn't even be rendering this component,
+    // but as a safeguard:
+    if (!mappingCompleted || Object.keys(columnMapping).length === 0) {
+      return [];
     }
 
     return Object.entries(columnMapping)
@@ -106,9 +103,8 @@ export function ImportGrid() {
                       );
                     }
                   }}
-                  className={`border-0 focus-visible:ring-1 h-9 ${
-                    errors ? "bg-red-50 focus-visible:ring-red-500" : ""
-                  }`}
+                  className={`border-0 focus-visible:ring-1 h-9 ${errors ? "bg-red-50 focus-visible:ring-red-500" : ""
+                    }`}
                 />
                 {errors && (
                   <Badge
@@ -124,7 +120,7 @@ export function ImportGrid() {
         };
       })
       .filter(Boolean) as ColumnDef<RowWithIndex>[];
-  }, [columnMapping, validationErrors, dispatch, rawRows]);
+  }, [columnMapping, validationErrors, dispatch, rawRows, mappingCompleted]);
 
   const table = useReactTable({ data, columns, getCoreRowModel: getCoreRowModel() });
   const { rows } = table.getRowModel();
@@ -152,40 +148,19 @@ export function ImportGrid() {
 
     const payload = rawRows.map((rawRow, index) => {
       const edited = editedRows[index] || {};
-      const mapped: any = {};
 
-      // Apply mapping UI
-      Object.entries(columnMapping).forEach(([targetField, sourceHeader]) => {
-        if (!sourceHeader) return;
-        const value =
-          edited[targetField as keyof typeof edited] ??
-          rawRow[sourceHeader] ??
-          "";
-        mapped[targetField] = value;
-      });
+      // rawRow already has canonical keys from applyMapping
+      // edited has overrides
+      const merged = { ...rawRow, ...edited };
 
-      // FALLBACKS FIX: If mapping UI fails, detect CSV headers automatically
       return {
-        caseId:
-          mapped.caseId?.trim() ||
-          rawRow["case_id"]?.trim() ||
-          rawRow["Case ID"]?.trim() ||
-          rawRow["case id"]?.trim() ||
-          null,
-
-        applicantName:
-          mapped.applicantName?.trim() ||
-          rawRow["applicant_name"]?.trim() ||
-          rawRow["Applicant Name"]?.trim() ||
-          rawRow["applicant name"]?.trim() ||
-          null,
-
-        dob: mapped.dob || rawRow["dob"] || rawRow["DOB"] || null,
-
-        email: (mapped.email || "").trim() || null,
-        phone: (mapped.phone || "").trim() || null,
-        category: mapped.category || "TAX",
-        priority: mapped.priority || "MEDIUM",
+        caseId: merged.caseId?.trim() || null,
+        applicantName: merged.applicantName?.trim() || null,
+        dob: merged.dob || null,
+        email: (merged.email || "").trim() || null,
+        phone: (merged.phone || "").trim() || null,
+        category: merged.category || "TAX",
+        priority: merged.priority || "MEDIUM",
       };
     });
 
@@ -251,8 +226,7 @@ export function ImportGrid() {
       "Row,Case ID,Applicant,Email,Error",
       ...failedRows.map(
         (f) =>
-          `${f.rowIndex},"${f.data.caseId}","${f.data.applicantName}",${
-            f.data.email || ""
+          `${f.rowIndex},"${f.data.caseId}","${f.data.applicantName}",${f.data.email || ""
           },"${f.errors.join(" | ")}"`
       ),
     ].join("\n");
@@ -274,6 +248,17 @@ export function ImportGrid() {
         <h2 className="text-4xl font-bold">Import Complete!</h2>
         <p className="text-xl text-muted-foreground mt-4">
           Redirecting to Import History...
+        </p>
+      </div>
+    );
+  }
+
+  // RENDER GUARD: Only show grid if mapping is completed
+  if (!mappingCompleted) {
+    return (
+      <div className="text-center py-20 border-2 border-dashed rounded-xl">
+        <p className="text-muted-foreground">
+          Please map your columns in the sidebar to continue.
         </p>
       </div>
     );

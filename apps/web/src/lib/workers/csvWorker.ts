@@ -1,33 +1,6 @@
 // apps/web/src/lib/workers/csvWorker.ts
 import Papa from "papaparse";
 
-// ------------------------------------------------------------
-// Convert CSV snake_case headers → camelCase CaseRow format
-// ------------------------------------------------------------
-function normalizeRow(row: any) {
-  return {
-    caseId: row.caseId || row.case_id || row["case id"] || row["Case ID"] || "",
-
-    applicantName:
-      row.applicantName ||
-      row.applicant_name ||
-      row["Applicant Name"] ||
-      row["applicant name"] ||
-      "",
-
-    dob:
-      row.dob || row.DOB || row["date of birth"] || row["Date of Birth"] || "",
-
-    email: row.email || row.Email || "",
-
-    phone: row.phone || row.Phone || "",
-
-    category: row.category || row.Category || "",
-
-    priority: row.priority || row.Priority || "",
-  };
-}
-
 self.onmessage = (e: MessageEvent<string>) => {
   const csvText = e.data;
 
@@ -44,7 +17,7 @@ self.onmessage = (e: MessageEvent<string>) => {
   Papa.parse(csvText, {
     header: true,
     skipEmptyLines: true,
-    dynamicTyping: false,
+    dynamicTyping: false, // Keep everything as strings for safety
 
     complete: (result) => {
       if (result.errors.length > 0) {
@@ -57,27 +30,13 @@ self.onmessage = (e: MessageEvent<string>) => {
         return;
       }
 
-      // original CSV fields
-      const originalData = result.data as any[];
-
-      // 🚀 Normalize into camelCase rows for entire pipeline
-      const normalized = originalData.map((row) => normalizeRow(row));
-
-      // We use camelCase headers only
-      const headers = [
-        "caseId",
-        "applicantName",
-        "dob",
-        "email",
-        "phone",
-        "category",
-        "priority",
-      ];
+      const data = result.data as any[];
+      const headers = result.meta.fields || [];
 
       self.postMessage({
-        data: normalized,
+        data,
         headers,
-        totalRows: normalized.length,
+        totalRows: data.length,
       });
     },
 

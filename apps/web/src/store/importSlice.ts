@@ -15,6 +15,7 @@ export interface ImportState {
 
   // Flow (non-undoable)
   columnMapping: ColumnMapping;
+  mappingCompleted: boolean;
 }
 
 const initialState: ImportState = {
@@ -25,6 +26,7 @@ const initialState: ImportState = {
   parsedAt: null,
   error: null,
   columnMapping: {},
+  mappingCompleted: false,
 };
 
 const importSlice = createSlice({
@@ -54,6 +56,7 @@ const importSlice = createSlice({
 
       // Reset mapping on new file
       state.columnMapping = {};
+      state.mappingCompleted = false;
     },
 
     setParseError: (state, action: PayloadAction<string>) => {
@@ -65,6 +68,29 @@ const importSlice = createSlice({
       state.columnMapping = action.payload;
     },
 
+    setMappingCompleted: (state, action: PayloadAction<boolean>) => {
+      state.mappingCompleted = action.payload;
+    },
+
+    applyMapping: (state) => {
+      // Transform rawRows based on columnMapping
+      // This ensures that subsequent components can rely on standard keys
+      const mapping = state.columnMapping;
+
+      state.rawRows = state.rawRows.map((row) => {
+        const newRow: any = { ...row };
+
+        // Map mapped fields to their canonical keys
+        Object.entries(mapping).forEach(([field, header]) => {
+          if (header && row[header] !== undefined) {
+            newRow[field] = row[header];
+          }
+        });
+
+        return newRow;
+      });
+    },
+
     resetImport: () => initialState,
   },
 });
@@ -74,6 +100,8 @@ export const {
   setParsedData,
   setParseError,
   setColumnMapping,
+  setMappingCompleted,
+  applyMapping,
   resetImport,
 } = importSlice.actions;
 
