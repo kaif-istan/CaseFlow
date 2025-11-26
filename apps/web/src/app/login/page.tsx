@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Mail, Lock, Loader2, ArrowRight } from "lucide-react"
+import { ModeToggle } from "@/components/ui/theme-toggle"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -52,7 +53,10 @@ export default function LoginPage() {
       </div>
 
       {/* Right Side - Form */}
-      <div className="flex-1 flex items-center justify-center p-8 bg-background">
+      <div className="flex-1 flex items-center justify-center p-8 bg-background relative">
+        <div className="absolute top-4 right-4">
+          <ModeToggle />
+        </div>
         <div className="w-full max-w-md space-y-8">
           <div className="space-y-2 text-center">
             <h1 className="text-3xl font-bold tracking-tight">Welcome back</h1>
