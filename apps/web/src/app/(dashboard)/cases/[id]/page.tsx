@@ -1,7 +1,8 @@
-// apps/web/src/app/(dashboard)/cases/[id]/page.tsx
 import { requireAuth } from "@/lib/auth"
 import { prisma } from "@caseflow/db"
 import { CaseDetails } from "@/components/CaseDetails"
+
+export const dynamic = "force-dynamic";
 
 export const metadata = {
     title: "Case Details",
