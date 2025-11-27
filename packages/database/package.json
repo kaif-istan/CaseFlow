@@ -3,11 +3,11 @@
   "version": "0.0.0",
   "description": "",
   "scripts": {
-    "db:generate": "prisma generate",
-    "db:migrate": "prisma migrate dev --create-only",
-    "db:deploy": "prisma migrate deploy",
-    "db:studio": "prisma studio",
-    "db:push": "prisma db push --schema ./prisma/schema.prisma"
+    "db:generate": "prisma generate --config ./prisma.config.ts ",
+    "db:migrate": "prisma migrate dev --create-only --config ./prisma.config.ts",
+    "db:deploy": "prisma migrate deploy --config ./prisma.config.ts",
+    "db:studio": "prisma studio --config ./prisma.config.ts",
+    "db:push": "prisma db push --schema ./prisma/schema.prisma --config ./prisma.config.ts"
   },
   "keywords": [],
   "author": "",

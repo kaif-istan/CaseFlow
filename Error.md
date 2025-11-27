@@ -78,3 +78,11 @@ Because the pipeline now receives consistently structured rows, everything works
 - Keeps all other parts of the import pipeline clean and predictable
 - Avoids adding fallback hacks or duplicate mappings in multiple files
 - Ensures complete cross-system consistency
+
+
+Build Time vs. Run Time: The RUN command happens during the build process. At this stage, your Docker Compose services (like Postgres) are not running yet, so the build container cannot connect to them.
+Validation Only: prisma generate builds the client code from your schema. It doesn't need a real DB connection, but Prisma 7 checks that DATABASE_URL exists in the environment because it's in your config file.
+Dummy Value: The dummy URL exists solely to satisfy this check so the build doesn't crash.
+Real Value: When the container starts (Run Time), the 
+docker-compose.yml
+ injects the real DATABASE_URL, and that's what the app uses to connect.
