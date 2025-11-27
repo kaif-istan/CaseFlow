@@ -20,6 +20,14 @@ The UntrustedHost error you saw earlier should be fixed now that AUTH_TRUST_HOST
 
 If you want the logs to say localhost, you can add HOSTNAME: "0.0.0.0" to the environment section in docker-compose.yml, but it's purely cosmetic
 
+
+Run docker compose up --build to start the database and app
+In a new terminal, run: $env:DATABASE_URL="postgresql://postgres:postgres@localhost:5432/caseflow"; pnpm exec tsx scripts/create-admin.ts
+This will create:
+
+Admin: admin@caseflow.com / admin123
+Operator: operator@caseflow.com / user123
+
 ### Manual Setup
 
 If you prefer to run the application manually:

@@ -9,29 +9,31 @@ on:
 jobs:
   build:
     name: Build and Test
-    timeout-minutes: 15
     runs-on: ubuntu-latest
-    # To use Remote Caching, uncomment the next lines and follow the steps below.
-    # env:
-    #  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-    #  TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+    timeout-minutes: 20
+
+    env:
+      DATABASE_URL: postgresql://dummy:dummy@localhost:5432/dummy
+      PRISMA_HIDE_UPDATE_MESSAGE: "1"
+      PRISMA_CLIENT_ENGINE_TYPE: "binary"
 
     steps:
-      - name: Check out code
+      - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
 
-      - name: Setup Node.js environment
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: "pnpm"
-
+      # ✅ Install pnpm
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 9
+          run_install: false
+
+      # Node setup AFTER pnpm exists
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
 
       - name: Install dependencies
         run: pnpm install
@@ -47,9 +49,3 @@ jobs:
 
       - name: Type Check
         run: pnpm turbo run check-types
-
-      # Optional: Playwright E2E Tests
-      # - name: Install Playwright Browsers
-      #   run: pnpm exec playwright install --with-deps
-      # - name: Run Playwright tests
-      #   run: pnpm exec playwright test
