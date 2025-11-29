@@ -38,10 +38,10 @@ jobs:
       - name: Generate Prisma Client
         run: pnpm turbo run db:generate
 
-      - name: Run Database Migrations
-        run: |
-          cd packages/database
-          npx prisma migrate deploy
+      # - name: Run Database Migrations
+      #   run: |
+      #     cd packages/database
+      #     npx prisma migrate deploy
 
       - name: Deploy to Vercel
         run: |
