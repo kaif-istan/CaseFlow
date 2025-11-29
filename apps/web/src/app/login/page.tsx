@@ -43,10 +43,10 @@ export default function LoginPage() {
             "CaseFlow has completely transformed how we handle our import workflows. The efficiency gains are remarkable."
           </blockquote>
           <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-full bg-zinc-700" />
+            <img src="https://avatars.githubusercontent.com/u/159082882?v=4" className="w-10 h-10 rounded-full bg-zinc-700"  />
             <div>
-              <div className="font-semibold">Sofia Davis</div>
-              <div className="text-sm text-zinc-400">Head of Operations</div>
+              <div className="font-semibold">Md Kaif</div>
+              <div className="text-sm text-zinc-400">Senior Software Engineer</div>
             </div>
           </div>
         </div>
